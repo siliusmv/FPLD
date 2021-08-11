@@ -48,21 +48,20 @@ univariate_simulation_study = function(n_vec,
 
 random_lambda = function(positive_support = FALSE) {
   while (TRUE) {
-    if (positive_support) {
-      while (TRUE) {
-        lambda = c(
-          rnorm(1, 5),
-          exp(rnorm(1, 2, 2)),
-          runif(1, -.9, .9),
-          exp(rnorm(1)),
-          exp(rnorm(1)) - .5)
-        if (qFPLD(0, lambda) > 0) break
-      }
+    lambda = c(
+      rnorm(1, 5, 3),
+      runif(1, 1.5, 8),
+      runif(1, -.9, .9),
+      runif(1, .01, .9),
+      runif(1, -.3, .7))
+    lambda = backtransform_location_scale(lambda)
+    if (positive_support && qFPLD(0, lambda) <= 0) {
+      # Try one more time
     } else {
-      lambda = runif(5)
+      # We don't want the support of the FPLD to be super small
+      if (diff(qFPLD(c(0, 1), lambda)) > 1) break
     }
-    # We ended up getting distributions where the support had a length of 0.002 without this
-    if (diff(qFPLD(c(0, 1), lambda)) > 1) break
   }
   lambda
 }
+
