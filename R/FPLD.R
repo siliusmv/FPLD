@@ -5,10 +5,10 @@
 # pFPLD - estimation of cumulative distribution function
 # rFPLD - sample from the FPLD
 # densqFPLD - quantile density function
-# transformFPLDParams - transform the FPLD parameters to some that are
-#   better suited for numerical optimisation
-# backtransformFPLDParams - transform the FPLD parameters back after
-#   having performed numerical optimisation
+# transformFPLDParams - transform from λ to λ~
+# backtransformFPLDParams - transform from λ~ to λ
+# transform_location_scale - transform from λ to λ*
+# backtransform_location_scale - transform from λ* to λ
 # ==================================================================
 
 #' @export
@@ -67,9 +67,8 @@ rFPLD = function(n, par, transformed = FALSE) {
 
 #' @export
 transformFPLDParams = function(par, a = .25, b = .75) {
-  par[1] = qFPLD(.5, par)
-  iqr = qFPLD(b, par) - qFPLD(a, par)
-  par[2] = log(exp(iqr) - 1)
+  par = transform_location_scale(par, a, b)
+  par[2] = log(exp(par[2]) - 1)
   par[3] = log(1 - par[3]) - log(1 + par[3])
   par[4] = log(exp(par[4]) - 1)
   par[5] = log(exp(par[5] + .5) - 1)
@@ -81,7 +80,22 @@ backtransformFPLDParams = function(par, a = .25, b = .75) {
   par[3] = (2 / (1 + exp(par[3]))) - 1
   par[4] = log(1 + exp(par[4]))
   par[5] = log(1 + exp(par[5])) - .5
-  par[2] = (log(1 + exp(par[2]))) / (qFPLD(b, c(0, 1, par[3:5])) - qFPLD(a, c(0, 1, par[3:5])))
+  par[2] = log(1 + exp(par[2]))
+  par = backtransform_location_scale(par, a, b)
+  par
+}
+
+#' @export
+transform_location_scale = function(par, a = .25, b = .75) {
+  par[1] = qFPLD(.5, par)
+  par[2] = qFPLD(b, par) - qFPLD(a, par)
+  par
+}
+
+#' @export
+backtransform_location_scale = function(par, a = .25, b = .75) {
+  scaled_iqr = qFPLD(b, c(0, 1, par[3:5])) - qFPLD(a, c(0, 1, par[3:5]))
+  par[2] = par[2] / scaled_iqr
   par[1] = par[1] - qFPLD(.5, c(0, par[2:5]))
   par
 }

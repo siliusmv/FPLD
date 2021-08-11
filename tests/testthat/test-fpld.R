@@ -1,13 +1,12 @@
 
 
-test_that("transformFPLDParams gives correct median and iqr", {
+test_that("transform_location_scale gives correct median and iqr", {
   par = runif(5)
   x = rFPLD(20000, par)
-  par2 = transformFPLDParams(par)
+  par2 = transform_location_scale(par)
   expect_equal(median(x), par2[1], tolerance = 1e-2)
-  expect_equal(unname(diff(quantile(x, c(.25, .75)))), log(exp(par2[2]) + 1), tolerance = 1e-1)
+  expect_equal(unname(diff(quantile(x, c(.25, .75)))), par2[2], tolerance = 1e-1)
 })
-
 
 test_that("dFPLD integrates to pFPLD", {
   par = runif(5)
@@ -31,6 +30,15 @@ test_that("densqFPLD integrates to qFPLD", {
   upper = runif(1, lower, 1)
   integral = integrate(densqFPLD, lower, upper, par = par)$value
   expect_equal(integral, qFPLD(upper, par) - qFPLD(lower, par), tolerance = 1e-5)
+})
+
+test_that("backtransform_location_scale works as it should", {
+  par = matrix(runif(5 * 100), nrow = 5)
+  p2 = matrix(nrow = 5, ncol = 100)
+  for (i in 1:100) {
+    p2 = backtransform_location_scale(transform_location_scale(par))
+  }
+  expect_equal(par, p2)
 })
 
 test_that("backtransformFPLDParams works as it should", {
