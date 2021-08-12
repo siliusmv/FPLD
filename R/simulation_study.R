@@ -10,9 +10,10 @@ univariate_simulation_study = function(n_vec,
   res = list()
   for (n in n_vec) {
     message("n = ", n)
-    res[[n]] = pbapply::pblapply(
+    res[[n]] = parallel::mclapply(
       X = 1:num_sim,
-      cl = num_cores,
+      mc.cores = num_cores,
+      mc.preschedule = FALSE,
       FUN = function(i) {
         if (is.null(lambda)) lambda = random_lambda(positive_support)
         y = rFPLD(n, lambda, transformed = FALSE)
