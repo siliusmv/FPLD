@@ -10,7 +10,7 @@ crps_latex_table = function(df) {
                   bad_upper_boundary = upper_difference < 0 | is.na(upper_difference)) %>%
     dplyr::group_by(d, n, iter) %>%
     dplyr::summarise(crps = expected_crps_fpld(estimate, truth),
-                     se = (estimate - truth) ^ 2,
+                     se = (transform_location_scale(estimate) - transform_location_scale(truth)) ^ 2,
                      perfect_crps = expected_crps_fpld(truth, truth),
                      skill_score = 1 - perfect_crps / crps,
                      time = mean(time),

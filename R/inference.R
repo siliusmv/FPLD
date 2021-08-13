@@ -27,10 +27,6 @@ estimateFPLD = function(x,
         x = x,
         positive_support = positive_support,
         ...),
-      #tmp = gld::starship(x, param = "fm5")$lambda
-      #tmp[2] = 2 / tmp[2]
-      #tmp[c(3, 4, 5)] = tmp[c(5, 3, 4)]
-      #tmp
       error = function(cond) {
         message("something went wrong in gld::starship")
         NA
@@ -94,12 +90,9 @@ method_of_quantiles = function(x,
     local_opts = list(
       algorithm = "NLOPT_LN_NELDERMEAD",
       maxeval = maxit,
-      xtol_rel = 1e-10,
-      ftol_rel = 1e-10,
+      xtol_rel = 1e-7,
       ranseed = 1),
     maxeval = maxit,
-    xtol_rel = 1e-10,
-    ftol_rel = 1e-10,
     print_level = trace,
     randseed = 1)
 
@@ -184,7 +177,8 @@ quantile_loss = function(par, xx, transformed, p_vec = NULL) {
     xx = xx[!is.na(xx)]
     p_vec = (seq_along(xx) - .5) / length(xx)
   }
-  mean((xx - qFPLD(p_vec, par, transformed)) ^ 2)
+  #mean((xx - qFPLD(p_vec, par, transformed)) ^ 2)
+  mean(abs(xx - qFPLD(p_vec, par, transformed)))
 }
 
 get_fpld_ineq_func = function(big_support = TRUE, positive_support = TRUE, l0 = TRUE, zero_quantile = 1e-4) {

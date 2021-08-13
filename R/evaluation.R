@@ -13,6 +13,8 @@ crps_gld = function(y, par) {
 #' @export
 crps_fpld = function(y, par) {
   if (any(is.na(par))) return(rep(NA, length(y)))
+  if (par[4] == 0) par[4] = .5 * .Machine$double.eps # Lazy solution, but works well
+  if (par[5] == 0) par[5] = .5 * .Machine$double.eps # Lazy solution, but works well
   F = pFPLD(y, par)
   y * (2 * F - 1) - 2 * integrate_p_times_fpld_simple(par) + 2 * integrate_fpld_simple(par, F)
 }
