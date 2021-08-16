@@ -69,3 +69,4 @@ saveRDS(df, filename)
 if (interactive()) {
   table = crps_latex_table(df)
 }
+

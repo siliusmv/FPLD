@@ -99,6 +99,8 @@ get_label = function(i) paste0(names[i], ", ", nice_seasons[i])
 
 distributions = list(
   fpld = function(x, par) dFPLD(x, par),
+  #fpld_mle = function(x, par) dFPLD(x, par),
+  #fpld_starship = function(x, par) dFPLD(x, par),
   gamma = function(x, par) dgamma(x, par[1], par[2]),
   #exponential = function(x, par) dexp(x, par),
   #gaussian = function(x, par) dnorm(x, par[1], par[2]),
@@ -128,10 +130,11 @@ plot = lapply(
     res
   }) %>%
   do.call(rbind, .) %>%
-  dplyr::mutate(i = factor(i, label = get_label(1:4), levels = 1:4),
-                distribution = factor(distribution, label = c("FPLD", "Gamma", "GLD", "Lognormal", "Exponential", "Gaussian"),
-                                      levels = c("fpld", "gamma", "gld", "lognormal", "exponential", "gaussian")),
-                best = factor(best, label = c("Lowest CRPS", "Others"), levels = c(TRUE, FALSE))) %>%
+  dplyr::mutate(
+    i = factor(i, label = get_label(1:4), levels = 1:4),
+    distribution = factor(distribution, label = c("FPLD", "Gamma", "GLD", "Lognormal", "Exponential", "Gaussian"),
+                          levels = c("fpld", "gamma", "gld", "lognormal", "exponential", "gaussian")),
+    best = factor(best, label = c("Lowest CRPS", "Others"), levels = c(TRUE, FALSE))) %>%
   ggplot() +
   geom_histogram(aes(x = obs, y = ..density..), boundary = 0) +
   geom_line(aes(x = x, y = y, col = distribution, linetype = distribution, group = distribution), size = 1.8) +
@@ -147,7 +150,7 @@ tikz_plot(file.path(image_dir(), "local_estimation_multiple_distributions.pdf"),
 
 
 stats = params %>%
-  dplyr::filter(distribution %in% c("fpld", "gamma", "gld", "lognormal")) %>%
+  dplyr::filter(distribution %in% c("fpld", "fpld_mle", "fpld_starship", "gamma", "gld", "lognormal")) %>%
   dplyr::mutate(bad_lower_boundary = lower_difference < 0 | is.na(lower_difference),
                 negative_lower_boundary = lower_boundary < 0,
                 bad_upper_boundary = upper_difference < 0 | is.na(upper_difference)) %>%
@@ -166,9 +169,12 @@ stats = params %>%
                 negative_exceedance = ifelse(is.nan(negative_exceedance), 0, negative_exceedance),
                 fail = is.na(crps)) %>%
   dplyr::group_by(season, id) %>%
-  dplyr::mutate(best_crps = crps == min(crps)) %>%
-  dplyr::group_by(distribution) %>%
-  dplyr::summarise(crps = mean(crps, na.rm = TRUE),
+  dplyr::mutate(best_crps = crps == min(crps),
+                best_crps_diff = crps - min(crps)) %>%
+  dplyr::group_by(season, distribution) %>%
+  dplyr::summarise(mean_crps = mean(crps, na.rm = TRUE),
+                   median_crps = median(crps, na.rm = TRUE),
+                   mean_crps_diff = mean(best_crps_diff, na.rm = TRUE),
                    best_crps_percentage = mean(best_crps, na.rm = TRUE) * 100,
                    lower_prob = mean(lower_prob),
                    time = mean(time),
@@ -182,15 +188,26 @@ stats = params %>%
                    mean_negative_exceedance = mean(negative_exceedance, na.rm = TRUE),
                    mean_exceedance = mean(lower_exceedance + upper_exceedance, na.rm = TRUE))
 
+print(as.data.frame(stats))
+
 table_df = stats %>%
-  dplyr::select(distribution, crps, best_crps_percentage) %>%
+  dplyr::select(season, distribution, mean_crps, best_crps_percentage) %>%
   dplyr::mutate(distribution = factor(distribution,
-                                      labels = c("FPLD", "Gamma", "GLD", "Lognormal"),
-                                      levels = c("fpld", "gamma", "gld", "lognormal")))
-names(table_df) = c("Distribution", "CRPS", "Best CRPS")
+                                      labels = c("FPLD (MQ)", "FPLD (ML)", "FPLD (starship)", "GLD", "Gamma", "Lognormal"),
+                                      levels = c("fpld", "fpld_mle", "fpld_starship", "gld", "gamma", "lognormal")),
+                season = factor(season,
+                                levels = c("winter", "spring", "summer", "autumn"),
+                                labels = c("Winter", "Spring", "Summer", "Autumn"))) %>%
+  dplyr::group_by(season) %>%
+  dplyr::mutate(best = mean_crps == min(mean_crps))
+names(table_df) = c("Season", "Distribution", "CRPS", "Best CRPS", "best")
 table_df[[1]] = as.character(table_df[[1]])
-table_df[[2]] = paste0("\\(", format(round(table_df[[2]], digits = 3)), "\\)")
-table_df[[3]] = paste0("\\(", format(round(table_df[[3]], digits = 1)), "\\%\\)")
+table_df[[2]] = as.character(table_df[[2]])
+table_df[[3]] = format(round(table_df[[3]], digits = 3))
+table_df[[3]][which(table_df$best)] = paste0("\\bm{", table_df[[3]][which(table_df$best)], "}")
+table_df[[3]] = paste0("\\(", table_df[[3]], "\\)")
+table_df[[4]] = paste0("\\(", format(round(table_df[[4]], digits = 1)), "\\%\\)")
+table_df$best = NULL
 
 table = list()
 table[[1]] = "\\toprule"
@@ -204,4 +221,65 @@ table = paste(table, collapse = " \\\\\n")
 table = gsub("rule \\\\\\\\", "rule ", table)
 cat(table, "\n")
 
+tmp = table_df %>%
+  dplyr::select(-"Best CRPS") %>%
+  tidyr::pivot_wider(names_from = "Distribution", values_from = "CRPS") %>%
+  .[c(4, 2, 3, 1), c(1, 2, 3, 4, 6, 5, 7)]
+table = list()
+table[[1]] = "\\toprule"
+table[[2]] = paste(names(tmp), collapse = " & ")
+table[[3]] = "\\midrule"
+for (i in seq_len(nrow(tmp))) {
+  table[[length(table) + 1]] = paste(c(tmp[i, 1], tmp[i, -1]), collapse = " & ")
+}
+table[[length(table) + 1]] = "\\bottomrule"
+table = paste(table, collapse = " \\\\\n")
+table = gsub("rule \\\\\\\\", "rule ", table)
+cat(table, "\n")
 
+
+
+# Permutation test
+permutation_test = list()
+for (s in unique(c(params$season))) {
+  for (d in c("fpld", "fpld_mle", "fpld_starship")) {
+    x1 = dplyr::filter(params, distribution == d, season == s) %>%
+      dplyr::distinct(id, .keep_all = TRUE) %>%
+      dplyr::pull(crps)
+    x2 = dplyr::filter(params, distribution == "gld", season == s) %>%
+      dplyr::distinct(id, .keep_all = TRUE) %>%
+      dplyr::pull(crps)
+    mean_diff = mean(x2 - x1)
+    permutation_means = rep(0, 10000)
+    for (i in 1:10000) {
+      index = sample(c(1, 2), length(x1), replace = TRUE)
+      permutation_means[i] = mean(c(x1[index == 1] - x2[index == 1], x2[index == 2] - x1[index == 2]))
+    }
+    permutation_test[[length(permutation_test) + 1]] = data.frame(
+      season = s, distribution = d, p = sum(permutation_means > mean_diff) / length(permutation_means))
+  }
+}
+permutation_test = do.call(rbind, permutation_test)
+permutation_test
+
+permutation_test = list()
+for (s in unique(c(params$season))) {
+  for (d in c("fpld", "fpld_mle")) {
+    x1 = dplyr::filter(params, distribution == d, season == s) %>%
+      dplyr::distinct(id, .keep_all = TRUE) %>%
+      dplyr::pull(crps)
+    x2 = dplyr::filter(params, distribution == "fpld_starship", season == s) %>%
+      dplyr::distinct(id, .keep_all = TRUE) %>%
+      dplyr::pull(crps)
+    mean_diff = mean(x1 - x2)
+    permutation_means = rep(0, 10000)
+    for (i in 1:10000) {
+      index = sample(c(1, 2), length(x1), replace = TRUE)
+      permutation_means[i] = mean(c(x1[index == 1] - x2[index == 1], x2[index == 2] - x1[index == 2]))
+    }
+    permutation_test[[length(permutation_test) + 1]] = data.frame(
+      season = s, distribution = d, p = sum(permutation_means > mean_diff) / length(permutation_means))
+  }
+}
+permutation_test = do.call(rbind, permutation_test)
+permutation_test

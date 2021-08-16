@@ -38,6 +38,8 @@ saveRDS(pars, file.path(data_dir(), "local_fpld_pars.rds"))
 
 distributions = list(
   fpld = function(x) estimateFPLD(x, positive_support = TRUE),
+  fpld_mle = function(x) estimateFPLD(x, positive_support = TRUE, method = "mle"),
+  fpld_starship = function(x) estimateFPLD(x, positive_support = TRUE, method = "starship"),
   gamma = function(x) MASS::fitdistr(x, "gamma")$estimate,
   exponential = function(x) MASS::fitdistr(x, "exponential")$estimate,
   gaussian = function(x) MASS::fitdistr(x, "normal")$estimate,
@@ -46,6 +48,8 @@ distributions = list(
 
 parnames = list(
   fpld = paste0("lambda", 1:5),
+  fpld_mle = paste0("lambda", 1:5),
+  fpld_starship = paste0("lambda", 1:5),
   gamma = c("shape", "rate"),
   exponential = "rate",
   gaussian = c("mean", "sd"),
@@ -54,6 +58,8 @@ parnames = list(
 
 crps_func = list(
   fpld = function(x, par) mean(crps_fpld(x, par)),
+  fpld_mle = function(x, par) mean(crps_fpld(x, par)),
+  fpld_starship = function(x, par) mean(crps_fpld(x, par)),
   gamma = function(x, par) mean(scoringRules::crps_gamma(x, par[1], par[2])),
   exponential = function(x, par) mean(scoringRules::crps_exp(x, par)),
   gaussian = function(x, par) mean(scoringRules::crps_norm(x, par[1], par[2])),
@@ -62,6 +68,8 @@ crps_func = list(
 
 quantile_func = list(
   fpld = function(p, par) qFPLD(p, par),
+  fpld_mle = function(p, par) qFPLD(p, par),
+  fpld_starship = function(p, par) qFPLD(p, par),
   gamma = function(p, par) qgamma(p, par[1], par[2]),
   exponential = function(p, par) qexp(p, par),
   gaussian = function(p, par) qnorm(p, par[1], par[2]),
@@ -70,6 +78,8 @@ quantile_func = list(
 
 cdf_func = list(
   fpld = function(x, par) pFPLD(x, par),
+  fpld_mle = function(x, par) pFPLD(x, par),
+  fpld_starship = function(x, par) pFPLD(x, par),
   gamma = function(x, par) pgamma(x, par[1], par[2]),
   exponential = function(x, par) pexp(x, par),
   gaussian = function(x, par) pnorm(x, par[1], par[2]),

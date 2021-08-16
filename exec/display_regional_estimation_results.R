@@ -3,6 +3,7 @@ library(ggplot2)
 library(dplyr)
 library(patchwork)
 library(tidyr)
+library(sf)
 
 
 # ===============================================================
@@ -72,10 +73,12 @@ for (i in seq_along(params)) {
 params = do.call(rbind, params)
 
 estimates = params %>%
+  dplyr::group_by(season, tag, id) %>%
+  dplyr::mutate(transformed = transform_location_scale(estimate)) %>%
   dplyr::group_by(season, tag, par) %>%
-  dplyr::summarise(mean = mean(estimate),
-                   lower = quantile(estimate, .025),
-                   upper = quantile(estimate, .975)) %>%
+  dplyr::summarise(mean = mean(transformed),
+                   lower = quantile(transformed, .025),
+                   upper = quantile(transformed, .975)) %>%
   dplyr::mutate(tag = factor(tag, labels = c("Univariate", "Regression"),
                              levels = c("univariate", "out-of-sample")),
                 season = factor(season, levels = c("winter", "spring", "summer", "autumn"),
@@ -128,6 +131,8 @@ for (i in seq_along(params)) {
 params = do.call(rbind, params) %>%
   dplyr::left_join(dplyr::select(coords, id), by = "id") %>%
   dplyr::distinct(par, id, season, tag, .keep_all = TRUE) %>%
+  dplyr::group_by(id, season, tag) %>%
+  dplyr::mutate(transformed = transform_location_scale(estimate)) %>%
   st_as_sf()
 
 plot_df = params %>%
@@ -141,7 +146,7 @@ plots = list()
 for (i in 1:5) {
   plots[[i]] = dplyr::filter(plot_df, par == paste0("$lambda_", i, "$")) %>%
     ggplot() +
-    geom_sf(aes(col = estimate)) +
+    geom_sf(aes(col = transformed)) +
     facet_wrap(~season, nrow = 1)
   if (i %in% c(1, 2)) {
     plots[[i]] = plots[[i]] + scale_color_viridis_c(trans = "log10")
@@ -161,7 +166,7 @@ tikz_plot("tmp.pdf", plot, width = 10, height = 10)
 
 
 # ===============================================================
-# Plot the results in a map
+# Plot the PIT and CRPS results in a map
 # ===============================================================
 p1 = readRDS(file.path(data_dir(), "in-sample-fpld-pars.rds"))
 p2 = readRDS(file.path(data_dir(), "out-of-sample-fpld-pars.rds"))$params
