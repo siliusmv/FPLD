@@ -77,6 +77,7 @@ estimates = params %>%
   dplyr::mutate(transformed = transform_location_scale(estimate)) %>%
   dplyr::group_by(season, tag, par) %>%
   dplyr::summarise(mean = mean(transformed),
+                   median = median(transformed),
                    lower = quantile(transformed, .025),
                    upper = quantile(transformed, .975)) %>%
   dplyr::mutate(tag = factor(tag, labels = c("Univariate", "Regression"),
@@ -84,6 +85,7 @@ estimates = params %>%
                 season = factor(season, levels = c("winter", "spring", "summer", "autumn"),
                                 labels = c("Winter", "Spring", "Summer", "Autumn")))
 estimates$mean = format(round(estimates$mean, digits = 1))
+estimates$median = format(round(estimates$median, digits = 1))
 estimates$lower = format(round(estimates$lower, digits = 1))
 estimates$upper = format(round(estimates$upper, digits = 1))
 
@@ -93,7 +95,8 @@ table[1] = "\\toprule"
 table[2] = paste0("\\multicolumn{3}{c}{", my_seasons, "}", collapse = " & ")
 table[2] = paste("& &", table[2])
 table[3] = paste0("\\cmidrule(lr){", c(3, 6, 9, 12), "-", c(5, 8, 11, 14), "}", collapse = " ")
-table[4] = paste("Model & \\(\\hat{\\bm{\\lambda}}\\) &", paste(rep(c("Mean", "\\(2.5\\%\\)", "\\(97.5\\%\\)"), 4), collapse = " & "))
+#table[4] = paste("Model & \\(\\hat{\\bm{\\lambda}}\\) &", paste(rep(c("Mean", "\\(2.5\\%\\)", "\\(97.5\\%\\)"), 4), collapse = " & "))
+table[4] = paste("Model & \\(\\hat{\\bm{\\lambda}}\\) &", paste(rep(c("\\(2.5\\%\\)", "\\(50.0\\%\\)", "\\(97.5\\%\\)"), 4), collapse = " & "))
 table[5] = "\\midrule"
 for (model in c("Univariate", "Regression")) {
   for (i in 1:5) {
@@ -101,7 +104,7 @@ for (model in c("Univariate", "Regression")) {
     if (i == 1) tmp = paste(model, tmp)
     for (j in seq_along(my_seasons)) {
       tmp_df = dplyr::filter(estimates, season == my_seasons[j], tag == model)
-      tmp = paste(tmp, "&", paste0("\\(", tmp_df[i, 4:6], "\\)", collapse = " & "))
+      tmp = paste(tmp, "&", paste0("\\(", tmp_df[i, c(6, 5, 7)], "\\)", collapse = " & "))
     }
     table[length(table) + 1] = tmp
   }
@@ -196,12 +199,13 @@ label_df = params %>%
     season = factor(season, levels = c("winter", "summer"), labels = c("Winter", "Summer")),
     tag = factor(tag, levels = c("univariate", "out-of-sample"), labels = c("Univariate model", "Regression model")))
 
-plot2 = params %>%
+tmp = params %>%
   dplyr::filter(season %in% c("summer", "winter"), tag %in% c("univariate", "out-of-sample")) %>%
   dplyr::mutate(
     season = factor(season, levels = c("winter", "summer"), labels = c("Winter", "Summer")),
-    tag = factor(tag, levels = c("univariate", "out-of-sample"), labels = c("Univariate model", "Regression model"))) %>%
-  ggplot() +
+    tag = factor(tag, levels = c("univariate", "out-of-sample"), labels = c("Univariate model", "Regression model")))
+minmax = tmp$pit_e1 %>% {c(min(.), max(.))}
+plot2 = ggplot(tmp) +
   geom_sf(aes(col = pit_e1, size = abs(pit_e1))) +
   geom_segment(data = label_df, aes(x = x0, y = y0, xend = X, yend = Y, group = id)) +
   geom_label(data = label_df, aes(x = x0, y = y0, label = label), size = 3) +
@@ -209,19 +213,20 @@ plot2 = params %>%
   scale_size_continuous(range = c(1, 3),
                         breaks = seq(min(abs(params$pit_e1), na.rm = TRUE), max(abs(params$pit_e1), na.rm = TRUE), length = 50)) +
   guides(size = FALSE) +
-  scale_color_viridis_c()
+  scale_color_viridis_c(limits = c(-1, 1) * max(abs(minmax)))
 plot2 = style_map_plot(plot2, params, use_tex = TRUE) +
   theme(axis.text = element_blank(),
         axis.ticks = element_blank(),
         text = element_text(size = 15)) +
   labs(col = "$e_\\mu$")
 
-plot3 = params %>%
+tmp = params %>%
   dplyr::filter(season %in% c("summer", "winter"), tag %in% c("univariate", "out-of-sample")) %>%
   dplyr::mutate(
     season = factor(season, levels = c("winter", "summer"), labels = c("Winter", "Summer")),
-    tag = factor(tag, levels = c("univariate", "out-of-sample"), labels = c("Univariate model", "Regression model"))) %>%
-  ggplot() +
+    tag = factor(tag, levels = c("univariate", "out-of-sample"), labels = c("Univariate model", "Regression model")))
+minmax = tmp$pit_e2 %>% {c(min(.), max(.))}
+plot3 = ggplot(tmp) +
   geom_sf(aes(col = pit_e2, size = abs(pit_e2))) +
   geom_segment(data = label_df, aes(x = x0, y = y0, xend = X, yend = Y, group = id)) +
   geom_label(data = label_df, aes(x = x0, y = y0, label = label), size = 3) +
@@ -229,7 +234,7 @@ plot3 = params %>%
   scale_size_continuous(range = c(1, 3),
                         breaks = seq(min(abs(params$pit_e2), na.rm = TRUE), max(abs(params$pit_e2), na.rm = TRUE), length = 50)) +
   guides(size = FALSE) +
-  scale_color_viridis_c()
+  scale_color_viridis_c(limits = c(-1, 1) * max(abs(minmax)))
 plot3 = style_map_plot(plot3, params, use_tex = TRUE) +
   theme(axis.text = element_blank(),
         axis.ticks = element_blank(),
