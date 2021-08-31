@@ -209,18 +209,6 @@ table_df[[3]] = paste0("\\(", table_df[[3]], "\\)")
 table_df[[4]] = paste0("\\(", format(round(table_df[[4]], digits = 1)), "\\%\\)")
 table_df$best = NULL
 
-table = list()
-table[[1]] = "\\toprule"
-table[[2]] = paste(names(table_df), collapse = " & ")
-table[[3]] = "\\midrule"
-for (i in seq_len(nrow(table_df))) {
-  table[[length(table) + 1]] = paste(c(table_df[i, 1], table_df[i, -1]), collapse = " & ")
-}
-table[[length(table) + 1]] = "\\bottomrule"
-table = paste(table, collapse = " \\\\\n")
-table = gsub("rule \\\\\\\\", "rule ", table)
-cat(table, "\n")
-
 tmp = table_df %>%
   dplyr::select(-"Best CRPS") %>%
   tidyr::pivot_wider(names_from = "Distribution", values_from = "CRPS") %>%
@@ -236,8 +224,6 @@ table[[length(table) + 1]] = "\\bottomrule"
 table = paste(table, collapse = " \\\\\n")
 table = gsub("rule \\\\\\\\", "rule ", table)
 cat(table, "\n")
-
-
 
 # Permutation test
 permutation_test = list()
