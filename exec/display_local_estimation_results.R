@@ -132,7 +132,7 @@ plot = lapply(
   do.call(rbind, .) %>%
   dplyr::mutate(
     i = factor(i, label = get_label(1:4), levels = 1:4),
-    distribution = factor(distribution, label = c("FPLD", "Gamma", "GLD", "Lognormal", "Exponential", "Gaussian"),
+    distribution = factor(distribution, label = c("FPL", "Gamma", "GL", "Lognormal", "Exponential", "Gaussian"),
                           levels = c("fpld", "gamma", "gld", "lognormal", "exponential", "gaussian")),
     best = factor(best, label = c("Lowest CRPS", "Others"), levels = c(TRUE, FALSE))) %>%
   ggplot() +
