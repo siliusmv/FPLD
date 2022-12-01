@@ -1,5 +1,6 @@
 
-The goal of this package is to model diurnal temperature range in Norway using the FPLD.
+This repository contains the code used for creating all the results in the paper [Quantile based modeling of diurnal temperature range with the five-parameter lambda distribution](https://doi.org/10.1002/env.2719),
+which performs modelling of diurnal temperature range in Norway using the FPL distribution.
 
 ## Installation
 
@@ -36,13 +37,13 @@ Data preparation is performed in the `prepare_data.R` script.
 In the script `explore_data.R`, we examine the diurnal temperature range data and how it is linked
 to the available explanatory variables.
 
-### Univariate modelling with the FPLD
+### Univariate modelling with the FPL distribution
 The script `local_estimation.R` performs univariate modelling of diurnal temperature range using the
-FPLD. The script `display_local_estimation_results.R` evaluates the model fit.
+FPL distribution. The script `display_local_estimation_results.R` evaluates the model fit.
 
-### Regression-modelling with the FPLD
+### Regression-modelling with the FPL distribution
 The script `regional_estimation.R` performs regression-modelling of diurnal temperature range using
-a combination of quantile regression and FPLD marginals.
+a combination of quantile regression and FPL marginal distributions.
 The script `display_regional_estimation_results.R` evaluates the model fit.
 
 ## Data
